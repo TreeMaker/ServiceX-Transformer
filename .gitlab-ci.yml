@@ -33,8 +33,6 @@ before_script:
 # Jobs/Includes ---------------------------------------------------------------
 build_treemaker_Run2_2017-servicex:
     extends: .job_template_build
-    dependencies:
-        - tar_treemaker_Run2_2017-servicex
     variables:
         BRANCH_NAME: Run2_2017
         SUFFIX: servicex
@@ -45,8 +43,6 @@ build_treemaker_Run2_2017-servicex:
 
 build_treemaker_Run2_2017-servicex-dockerhub:
     extends: .job_template_build
-    dependencies:
-        - tar_treemaker_Run2_2017-servicex
     variables:
         CI_REGISTRY: https://index.docker.io/v1/
         CI_REGISTRY_USER: ${DOCKER_USERNAME}
