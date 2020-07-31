@@ -40,12 +40,39 @@ while getopts "c:d:f:p:u:h" opt; do
 done
 
 # Add these lines to the .bashrc and .zshrc files
+echo "Adding some lines to the login files ... "
 lines="# Turn this on so that stdout isn't buffered - otherwise logs in kubectl don't\n\
 #   show up until much later!\n\
 export PYTHONUNBUFFERED=1\n\
 export X509_USER_PROXY=/etc/grid-security/x509up\n"
 echo -e ${lines} >> ${HOME}/.bashrc
 echo -e ${lines} >> ${HOME}/.zshrc
+
+# Install missing python packages into the images base python version
+if [[ -x "$(command -v pip)" ]]; then
+	echo "Installing packages into the system python via 'pip' ... "
+	python2 -m pip install --user --no-cache-dir --upgrade pip
+	python2 -m pip install --user --no-cache-dir -r ${HOME}/ServiceX-Transformer/data/requirements.txt
+else
+	echo "Unable to install packages into the system python because 'pip' is not installed!"
+fi
+
+# Make the /servicex directory and copy some files into it
+echo "Setting up the /servicex directory ... "
+if [[ ! -d "/servicex" ]]; then
+	if [[ -x "$(command -v sudo)" ]]; then
+		sudo mkdir /servicex/
+		sudo chown -R cmsusr:cmsusr /servicex
+	else
+		echo "Unable to make the '/servicex' folder!"
+		exit 1
+	fi
+fi
+cp ${HOME}/.bashrc /servicex/.bashrc
+cp ${HOME}/.zshrc /servicex/.zshrc
+cp ${HOME}/ServiceX-Transformer/scripts/proxy-exporter.sh /servicex/
+cp ${HOME}/ServiceX-Transformer/python/validate_requests.py /servicex/
+cp ${HOME}/ServiceX-Transformer/python/transformer.py /servicex/
 
 # Source the cmsset if in a standalone CMSSW image
 echo "Sourcing the cmsset ... "
@@ -65,7 +92,7 @@ echo "Setting the CMSSW environment ..."
 eval `scramv1 runtime -sh`
 
 # Install missing python packages
-echo -e "Installing python packages via 'pip' ... "
+echo "Installing packages into the CMSSW python via 'pip' ... "
 python -m pip install --user --no-cache-dir -r ${HOME}/ServiceX-Transformer/data/requirements.txt
 
 # Download CMS Open Data test file
