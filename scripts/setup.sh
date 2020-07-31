@@ -44,7 +44,9 @@ echo "Adding some lines to the login files ... "
 lines="# Turn this on so that stdout isn't buffered - otherwise logs in kubectl don't\n\
 #   show up until much later!\n\
 export PYTHONUNBUFFERED=1\n\
-export X509_USER_PROXY=/etc/grid-security/x509up\n"
+export X509_USER_PROXY=/etc/grid-security/x509up\n\n\
+# Add this line to add the '.local/bin' folder to the PATH environment variable\n\
+export PATH=\""'${PATH}:${HOME}'"/.local/bin\"\n"
 echo -e ${lines} >> ${HOME}/.bashrc
 echo -e ${lines} >> ${HOME}/.zshrc
 
@@ -103,5 +105,5 @@ if [[ -n "$URL" ]]; then
 fi
 
 # Return to the ${HOME} directory
-echo -e "Returning to ${HOME} ... "
+echo "Returning to ${HOME} ... "
 cd ${HOME}
