@@ -1,0 +1,64 @@
+name: Docker Image CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
+env:
+  current_user: ${{ github.actor }}
+  cmssw_ver: CMSSW_10_2_21
+  treemaker_branch: Run2_2017
+
+jobs:
+  service-x-build:
+    name: Mirror, run GitLab CI, produce ServiceX Docker image
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip service-x]') && github.event_name != 'pull_request'"
+    steps:
+    - name: Reset user on push
+      if: github.event_name == 'push'
+      run: echo ::set-env name=current_user::$(echo ${{ github.repository }} | sed -E 's|/.*||')
+    - name: Look at key environment variables
+      run: echo -e "GITHUB_REF=${{ github.ref }}\nGITHUB_HEAD_REF=${{ github.head_ref }}\nGITHUB_BASE_REF=${{ github.base_ref }}\nGITHUB_ACTOR=${{ github.actor }}\nGITHUB_REPOSITORY=${{ github.repository }}\nGITHUB_SHA=${{ github.sha }}\nUSER=${{ env.current_user }}\nTREEMAKER_BRANCH=${{ env.treemaker_branch }}\nTIME=${{ steps.current-time.outputs.formattedTime }}"
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+    - uses: actions/checkout@v1
+    - name: Mirror + trigger CI
+      uses: aperloff/gitlab-mirror-and-ci-action@master
+      with:
+        args: "https://gitlab.cern.ch/treemaker/ServiceX-Transformer"
+      env:
+        GITLAB_HOSTNAME: "gitlab.cern.ch"
+        GITLAB_USERNAME: ${{ secrets.GITLAB_USERNAME }}
+        GITLAB_PASSWORD: ${{ secrets.GITLAB_PASSWORD }}
+#        GITLAB_PROJECT_ID: ""
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CHECKOUT_BRANCH: ${{ env.treemaker_branch }}
+        POLL_TIMEOUT: 60
+
+  service-x-build-cvmfs:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip service-x]')  && github.event_name != 'pull_request'"
+    steps:
+    - name: Reset user on push
+      if: github.event_name == 'push'
+      run: echo ::set-env name=current_user::$(echo ${{ github.repository }} | sed -E 's|/.*||')
+    - name: Build a Service-X compatible Docker image
+      env:
+        script_dir: /home/cmsuser/ServiceX-Transformer/scripts/
+        download_url: https://cernbox.cern.ch/index.php/s/DsfTPyDEgCjTmBQ/download
+        file_name: eos.opendata.cms.MonteCarlo2016.RunIISummer16MiniAODv2.QCD_Pt_600to800_TuneCUETP8M1_13TeV_pythia8.MINIAODSIM.PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6-v1.70000.0048131D-3CB3-E611-813A-001E67DFFB31_100evt.root
+        base_image: treemaker/treemaker:${{ env.treemaker_branch }}-latest
+        docker_options: -t -P --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined -e CVMFS_MOUNTS="cms.cern.ch" --name treemaker --entrypoint "/bin/bash"
+      run: docker run ${{ env.docker_options }} ${{ env.base_image }} -c "mkdir /servicex/ && chown -R cmsuser:cmsuser /servicex && /run.sh -c \"git clone https://github.com/${{ env.current_user }}/ServiceX-Transformer.git && ${{ env.script_dir }}/setup.sh -c ${{ env.cmssw_ver }} -f ${{ env.file_name }} -u ${{ env.download_url }} && rm -rf /home/cmsuser/ServiceX-Transformer/\" && cvmfs_config wipecache"
+    - name: Commit the changes
+      run: docker commit -c 'ENTRYPOINT ["/run.sh"]' -c 'CMD []' treemaker treemaker/treemaker:${{ env.treemaker_branch }}-servicex-cvmfs
+    - name: Log into registry
+      if: env.current_user == 'TreeMaker'
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+    - name: Publish the new docker image
+      if: env.current_user == 'TreeMaker'
+      run: docker push treemaker/treemaker:${{ env.treemaker_branch }}-servicex-cvmfs
