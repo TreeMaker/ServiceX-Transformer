@@ -66,7 +66,7 @@ eval `scramv1 runtime -sh`
 
 # Install missing python packages
 echo -e "Installing python packages via 'pip' ... "
-python -m pip install --user --no-cache-dir -r ${HOME}/requirements.txt
+python -m pip install --user --no-cache-dir -r ${HOME}/ServiceX-Transformer/data/requirements.txt
 
 # Download CMS Open Data test file
 if [[ -n "$URL" ]]; then
