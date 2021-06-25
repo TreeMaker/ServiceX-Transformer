@@ -48,12 +48,12 @@ jobs:
       run: echo "current_user=$(echo ${{ github.repository }} | sed -E 's|/.*||')" >> $GITHUB_ENV
     - name: Build a Service-X compatible Docker image
       env:
-        script_dir: /home/cmsuser/ServiceX-Transformer/scripts/
+        script_dir: /home/cmsusr/ServiceX-Transformer/scripts/
         download_url: https://cernbox.cern.ch/index.php/s/DsfTPyDEgCjTmBQ/download
         file_name: eos.opendata.cms.MonteCarlo2016.RunIISummer16MiniAODv2.QCD_Pt_600to800_TuneCUETP8M1_13TeV_pythia8.MINIAODSIM.PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6-v1.70000.0048131D-3CB3-E611-813A-001E67DFFB31_100evt.root
         base_image: treemaker/treemaker:${{ env.treemaker_branch }}-latest
         docker_options: -t -P --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined -e CVMFS_MOUNTS="cms.cern.ch" --name treemaker --entrypoint "/bin/bash"
-      run: docker run ${{ env.docker_options }} ${{ env.base_image }} -c "mkdir /servicex/ && chown -R cmsuser:cmsuser /servicex && /run.sh -c \"git clone https://github.com/${{ env.current_user }}/ServiceX-Transformer.git && ${{ env.script_dir }}/setup.sh -c ${{ env.cmssw_ver }} -f ${{ env.file_name }} -u ${{ env.download_url }} && rm -rf /home/cmsuser/ServiceX-Transformer/\" && cvmfs_config wipecache"
+      run: docker run ${{ env.docker_options }} ${{ env.base_image }} -c "mkdir /servicex/ && chown -R cmsusr:cmsusr /servicex && /run.sh -c \"git clone https://github.com/${{ env.current_user }}/ServiceX-Transformer.git && ${{ env.script_dir }}/setup.sh -c ${{ env.cmssw_ver }} -f ${{ env.file_name }} -u ${{ env.download_url }} && rm -rf /home/cmsusr/ServiceX-Transformer/\" && cvmfs_config wipecache"
     - name: Commit the changes
       run: docker commit -c 'ENTRYPOINT ["/run.sh"]' -c 'CMD []' treemaker treemaker/treemaker:${{ env.treemaker_branch }}-servicex-cvmfs
     - name: Log into registry
